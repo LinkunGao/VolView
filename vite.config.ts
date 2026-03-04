@@ -80,7 +80,7 @@ function configureSentryPlugin() {
 export default defineConfig(({ command }) => {
   const isBuild = command === 'build'
   return {
-    base: './',
+    base: isBuild ? '/volview/' : './',
     build: isBuild
       ? {
         outDir: distDir,
@@ -179,12 +179,60 @@ export default defineConfig(({ command }) => {
       vue(isBuild
         ? {}
         : { template: { transformAssetUrls } }),
+      viteStaticCopy({
+        targets: [
+          {
+            src: resolvePath(
+              resolveNodeModulePath('itk-wasm'),
+              'dist/pipeline/web-workers/bundles/itk-wasm-pipeline.min.worker.js'
+            ),
+            dest: 'itk',
+          },
+          {
+            src: resolvePath(
+              resolveNodeModulePath('@itk-wasm/image-io'),
+              'dist/pipelines/*{.wasm,.js,.zst}'
+            ),
+            dest: 'itk/image-io',
+          },
+          {
+            src: resolvePath(
+              resolveNodeModulePath('@itk-wasm/dicom'),
+              'dist/pipelines/*{.wasm,.js,.zst}'
+            ),
+            dest: 'itk/pipelines',
+          },
+          {
+            src: resolvePath(
+              resolveNodeModulePath(
+                '@itk-wasm/morphological-contour-interpolation'
+              ),
+              'dist/pipelines/*{.wasm,.js,.zst}'
+            ),
+            dest: 'itk/pipelines',
+          },
+          {
+            src: resolvePath(
+              rootDir,
+              'src/io/itk-dicom/emscripten-build/**/dicom*'
+            ),
+            dest: 'itk/pipelines',
+          },
+          {
+            src: resolvePath(
+              rootDir,
+              'src/io/resample/emscripten-build/**/resample*'
+            ),
+            dest: 'itk/pipelines',
+          },
+        ],
+      }),
       ...(isBuild
         ? [
           vueJsx(),
           cssInjected(),
           replaceNamedImportsFromGlobals({
-            pinia: ['defineStore', 'storeToRefs', 'createPinia'],
+            pinia: ['defineStore', 'storeToRefs', 'createPinia', 'getActivePinia'],
             vuetify: ['useTheme', 'useDisplay'],
           }),
         ]
@@ -195,54 +243,6 @@ export default defineConfig(({ command }) => {
           createHtmlPlugin({
             minify: true,
             template: 'index.html',
-          }),
-          viteStaticCopy({
-            targets: [
-              {
-                src: resolvePath(
-                  resolveNodeModulePath('itk-wasm'),
-                  'dist/pipeline/web-workers/bundles/itk-wasm-pipeline.min.worker.js'
-                ),
-                dest: 'itk',
-              },
-              {
-                src: resolvePath(
-                  resolveNodeModulePath('@itk-wasm/image-io'),
-                  'dist/pipelines/*{.wasm,.js,.zst}'
-                ),
-                dest: 'itk/image-io',
-              },
-              {
-                src: resolvePath(
-                  resolveNodeModulePath('@itk-wasm/dicom'),
-                  'dist/pipelines/*{.wasm,.js,.zst}'
-                ),
-                dest: 'itk/pipelines',
-              },
-              {
-                src: resolvePath(
-                  resolveNodeModulePath(
-                    '@itk-wasm/morphological-contour-interpolation'
-                  ),
-                  'dist/pipelines/*{.wasm,.js,.zst}'
-                ),
-                dest: 'itk/pipelines',
-              },
-              {
-                src: resolvePath(
-                  rootDir,
-                  'src/io/itk-dicom/emscripten-build/**/dicom*'
-                ),
-                dest: 'itk/pipelines',
-              },
-              {
-                src: resolvePath(
-                  rootDir,
-                  'src/io/resample/emscripten-build/**/resample*'
-                ),
-                dest: 'itk/pipelines',
-              },
-            ],
           }),
         ]),
       glslify({

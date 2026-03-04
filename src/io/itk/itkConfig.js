@@ -1,12 +1,7 @@
 const fullUrl = (relative) => {
-  // ex: /itk/image-io
-  const u = new URL(document.location); // ex: http://localhost:8043/orthanc/volview/index.html
-  const origin = u.origin; // ex: http://localhost:8043
-  const pathParts = u.pathname.split('/'); // ex: ['', 'orthanc', 'volview', 'index.html']
-  pathParts.pop(); // ex: ['', 'orthanc', 'volview']
-
-  const url = origin + pathParts.join('/') + relative; // ex http://localhost:8043/orthanc/volview/itk/image-io
-  return url;
+  // Always resolve to the /volview folder explicitly since our UMD is hosted there
+  const u = new URL(document.location);
+  return u.origin + '/volview' + relative;
 };
 
 const itkConfig = {
