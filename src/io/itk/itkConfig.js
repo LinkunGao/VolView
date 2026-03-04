@@ -1,7 +1,14 @@
 const fullUrl = (relative) => {
-  // Always resolve to the /volview folder explicitly since our UMD is hosted there
-  const u = new URL(document.location);
-  return u.origin + '/volview' + relative;
+  // Try to find the script tag that loaded VolView to determine the base URL
+  try {
+    const scriptUrl = document.currentScript.src;
+    const basePath = scriptUrl.substring(0, scriptUrl.lastIndexOf('/'));
+    return basePath + relative;
+  } catch (e) {
+    // Fallback if not determinable
+    console.warn('Could not determine VolView UMD path, falling back to /volview', e);
+    return window.location.origin + '/volview' + relative;
+  }
 };
 
 const itkConfig = {

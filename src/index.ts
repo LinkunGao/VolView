@@ -15,12 +15,24 @@ import { initItkWorker } from './io/itk/worker';
 
 patchExitPointerLock();
 
-// Configure itk-wasm to use assets from our plugin folder
-setPipelinesBaseUrl('/volview/itk/pipelines');
-setPipelineWorkerUrl('/volview/itk/itk-wasm-pipeline.min.worker.js');
-imageIoSetPipelinesBaseUrl('/volview/itk/image-io');
-dicomSetPipelinesBaseUrl('/volview/itk/pipelines');
-mciSetPipelinesBaseUrl('/volview/itk/pipelines');
+// Configure itk-wasm to use assets from our plugin folder dynamically based on where the umd bundle is hosted
+let basePath = '/volview'; // Fallback
+try {
+    const scriptUrl = document.currentScript ? (document.currentScript as HTMLScriptElement).src : '';
+    if (scriptUrl) {
+        basePath = scriptUrl.substring(0, scriptUrl.lastIndexOf('/'));
+    }
+} catch (e) {
+    console.warn('Could not determine VolView UMD path, falling back to /volview', e);
+}
+// Export to window so Vite's async renderBuiltUrl hook can access it later when document.currentScript is null
+(window as any).__VOLVIEW_BASE_PATH__ = basePath + '/';
+
+setPipelinesBaseUrl(`${basePath}/itk/pipelines`);
+setPipelineWorkerUrl(`${basePath}/itk/itk-wasm-pipeline.min.worker.js`);
+imageIoSetPipelinesBaseUrl(`${basePath}/itk/image-io`);
+dicomSetPipelinesBaseUrl(`${basePath}/itk/pipelines`);
+mciSetPipelinesBaseUrl(`${basePath}/itk/pipelines`);
 
 initItkWorker();
 

@@ -80,7 +80,31 @@ function configureSentryPlugin() {
 export default defineConfig(({ command }) => {
   const isBuild = command === 'build'
   return {
-    base: isBuild ? '/volview/' : './',
+    experimental: isBuild ? {
+      renderBuiltUrl(filename, { hostType }) {
+        if (hostType === 'js') {
+          return {
+            runtime: `(function() {
+              try {
+                // If this import is synchronous, grab its script source directly
+                if (document.currentScript && document.currentScript.src) {
+                  return document.currentScript.src.substring(0, document.currentScript.src.lastIndexOf('/') + 1) + ${JSON.stringify(filename)};
+                }
+                // If async (like Web Worker initialization), read the pre-captured basePath
+                if (window.__VOLVIEW_BASE_PATH__) {
+                  return window.__VOLVIEW_BASE_PATH__ + ${JSON.stringify(filename)};
+                }
+                return ${JSON.stringify('/volview/' + filename)};
+              } catch (e) {
+                return window.__VOLVIEW_BASE_PATH__ ? (window.__VOLVIEW_BASE_PATH__ + ${JSON.stringify(filename)}) : ${JSON.stringify('/volview/' + filename)};
+              }
+            })()`
+          };
+        }
+        return { relative: true };
+      }
+    } : undefined,
+    base: '', // Empty base so Vite doesn't prepend absolute paths statically
     build: isBuild
       ? {
         outDir: distDir,
