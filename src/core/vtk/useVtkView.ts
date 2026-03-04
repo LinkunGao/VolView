@@ -14,9 +14,10 @@ import {
   inject,
   MaybeRef,
   onScopeDispose,
-  unref,
   watchEffect,
   watchPostEffect,
+  markRaw,
+  unref,
 } from 'vue';
 
 export function useWebGLRenderWindow(
@@ -166,12 +167,12 @@ export function useVtkView(container: MaybeRef<Maybe<HTMLElement>>): View {
     interactor.delete();
   });
 
-  return {
+  return markRaw({
     renderer,
     renderWindow,
     interactor,
     renderWindowView,
     widgetManager,
     requestRender,
-  };
+  });
 }

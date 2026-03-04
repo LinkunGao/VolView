@@ -83,52 +83,56 @@ export default defineConfig(({ command }) => {
     base: './',
     build: isBuild
       ? {
-          outDir: distDir,
-          lib: {
-            entry: './src/index.ts',
-            name: 'VolView',
-            formats: ['umd'],
-            fileName: (format) => `volview.${format}.js`,
-          },
-          rollupOptions: {
-            external: ['vue', 'vuetify', 'pinia'],
-            output: {
-              inlineDynamicImports: true,
-              globals: {
-                vue: 'Vue',
-                vuetify: 'Vuetify',
-                pinia: 'Pinia',
-              },
-            },
-          },
-          sourcemap: true,
-        }
-      : {
-          outDir: distDir,
-          rollupOptions: {
-            output: {
-              manualChunks(id) {
-                if (id.includes('vuetify')) {
-                  return 'vuetify';
-                }
-                if (id.includes('vtk.js')) {
-                  return 'vtk.js';
-                }
-                if (id.includes('node_modules')) {
-                  return 'vendor';
-                }
-                return undefined;
-              },
-            },
-          },
-          sourcemap: true,
+        outDir: distDir,
+        lib: {
+          entry: './src/index.ts',
+          name: 'VolView',
+          formats: ['umd'],
+          fileName: (format) => `volview.${format}.js`,
         },
+        rollupOptions: {
+          external: ['vue', 'vuetify', 'pinia'],
+          output: {
+            inlineDynamicImports: true,
+            globals: {
+              vue: 'Vue',
+              vuetify: 'Vuetify',
+              pinia: 'Pinia',
+            },
+          },
+        },
+        sourcemap: true,
+      }
+      : {
+        outDir: distDir,
+        rollupOptions: {
+          output: {
+            manualChunks(id) {
+              if (id.includes('vuetify')) {
+                return 'vuetify';
+              }
+              if (id.includes('vtk.js')) {
+                return 'vtk.js';
+              }
+              if (id.includes('node_modules')) {
+                return 'vendor';
+              }
+              return undefined;
+            },
+          },
+        },
+        sourcemap: true,
+      },
     define: {
       __VERSIONS__: {
         volview: pkgInfo.versions.volview,
         'vtk.js': pkgInfo.versions['vtk.js'],
         'itk-wasm': pkgInfo.versions['itk-wasm'],
       },
+      "process.env": {
+        BASE_URL: "/",
+        NODE_ENV: "production"
+      }
     },
     resolve: {
       alias: [
@@ -177,70 +181,70 @@ export default defineConfig(({ command }) => {
         : { template: { transformAssetUrls } }),
       ...(isBuild
         ? [
-            vueJsx(),
-            cssInjected(),
-            replaceNamedImportsFromGlobals({
-              pinia: ['defineStore', 'storeToRefs', 'createPinia'],
-              vuetify: ['useTheme'],
-            }),
-          ]
+          vueJsx(),
+          cssInjected(),
+          replaceNamedImportsFromGlobals({
+            pinia: ['defineStore', 'storeToRefs', 'createPinia'],
+            vuetify: ['useTheme', 'useDisplay'],
+          }),
+        ]
         : [
-            vuetify({
-              autoImport: true,
-            }),
-            createHtmlPlugin({
-              minify: true,
-              template: 'index.html',
-            }),
-            viteStaticCopy({
-              targets: [
-                {
-                  src: resolvePath(
-                    resolveNodeModulePath('itk-wasm'),
-                    'dist/pipeline/web-workers/bundles/itk-wasm-pipeline.min.worker.js'
+          vuetify({
+            autoImport: true,
+          }),
+          createHtmlPlugin({
+            minify: true,
+            template: 'index.html',
+          }),
+          viteStaticCopy({
+            targets: [
+              {
+                src: resolvePath(
+                  resolveNodeModulePath('itk-wasm'),
+                  'dist/pipeline/web-workers/bundles/itk-wasm-pipeline.min.worker.js'
+                ),
+                dest: 'itk',
+              },
+              {
+                src: resolvePath(
+                  resolveNodeModulePath('@itk-wasm/image-io'),
+                  'dist/pipelines/*{.wasm,.js,.zst}'
+                ),
+                dest: 'itk/image-io',
+              },
+              {
+                src: resolvePath(
+                  resolveNodeModulePath('@itk-wasm/dicom'),
+                  'dist/pipelines/*{.wasm,.js,.zst}'
+                ),
+                dest: 'itk/pipelines',
+              },
+              {
+                src: resolvePath(
+                  resolveNodeModulePath(
+                    '@itk-wasm/morphological-contour-interpolation'
                   ),
-                  dest: 'itk',
-                },
-                {
-                  src: resolvePath(
-                    resolveNodeModulePath('@itk-wasm/image-io'),
-                    'dist/pipelines/*{.wasm,.js,.zst}'
-                  ),
-                  dest: 'itk/image-io',
-                },
-                {
-                  src: resolvePath(
-                    resolveNodeModulePath('@itk-wasm/dicom'),
-                    'dist/pipelines/*{.wasm,.js,.zst}'
-                  ),
-                  dest: 'itk/pipelines',
-                },
-                {
-                  src: resolvePath(
-                    resolveNodeModulePath(
-                      '@itk-wasm/morphological-contour-interpolation'
-                    ),
-                    'dist/pipelines/*{.wasm,.js,.zst}'
-                  ),
-                  dest: 'itk/pipelines',
-                },
-                {
-                  src: resolvePath(
-                    rootDir,
-                    'src/io/itk-dicom/emscripten-build/**/dicom*'
-                  ),
-                  dest: 'itk/pipelines',
-                },
-                {
-                  src: resolvePath(
-                    rootDir,
-                    'src/io/resample/emscripten-build/**/resample*'
-                  ),
-                  dest: 'itk/pipelines',
-                },
-              ],
-            }),
-          ]),
+                  'dist/pipelines/*{.wasm,.js,.zst}'
+                ),
+                dest: 'itk/pipelines',
+              },
+              {
+                src: resolvePath(
+                  rootDir,
+                  'src/io/itk-dicom/emscripten-build/**/dicom*'
+                ),
+                dest: 'itk/pipelines',
+              },
+              {
+                src: resolvePath(
+                  rootDir,
+                  'src/io/resample/emscripten-build/**/resample*'
+                ),
+                dest: 'itk/pipelines',
+              },
+            ],
+          }),
+        ]),
       glslify({
         include: ['**/*.vs', '**/*.fs', '**/*.vert', '**/*.frag', '**/*.glsl'],
         exclude: 'node_modules/**',
@@ -266,8 +270,8 @@ export default defineConfig(({ command }) => {
     optimizeDeps: isBuild
       ? {}
       : {
-          exclude: ['itk-wasm'],
-        },
+        exclude: ['itk-wasm'],
+      },
     test: {
       environment: 'happy-dom',
       // canvas support. See: https://github.com/vitest-dev/vitest/issues/740
