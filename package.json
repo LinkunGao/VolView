@@ -13,6 +13,7 @@
     "serve": "npm run dev",
     "prebuild": "patch-package",
     "build": "vite build",
+    "build:plugin": "cross-env BUILD_AS_PLUGIN=true vite build",
     "build:analyze": "cross-env ANALYZE_BUNDLE=1 npm run build",
     "test": "vitest",
     "test:e2e:chrome": "cross-env VITE_SHOW_SAMPLE_DATA=true npm run build && wdio run ./wdio.chrome.conf.ts",

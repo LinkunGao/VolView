@@ -1,4 +1,4 @@
-/// <reference types="vitest" />
+/// <reference types="vitest/config" />
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { createRequire } from 'node:module';
@@ -77,14 +77,15 @@ function configureSentryPlugin() {
     : ({} as Plugin);
 }
 
-export default defineConfig(({ command }) => {
-  const isBuild = command === 'build'
-  return {
-    experimental: isBuild ? {
-      renderBuiltUrl(filename, { hostType }) {
-        if (hostType === 'js') {
-          return {
-            runtime: `(function() {
+const isPlugin = process.env.BUILD_AS_PLUGIN === 'true';
+
+export default defineConfig({
+  experimental: isPlugin ? {
+    renderBuiltUrl(filename, { hostType }) {
+      if (hostType === 'js') {
+        return {
+          runtime: `(function() {
+            if (typeof __IS_PLUGIN__ !== 'undefined' && __IS_PLUGIN__) {
               try {
                 // If this import is synchronous, grab its script source directly
                 if (document.currentScript && document.currentScript.src) {
@@ -98,218 +99,221 @@ export default defineConfig(({ command }) => {
               } catch (e) {
                 return window.__VOLVIEW_BASE_PATH__ ? (window.__VOLVIEW_BASE_PATH__ + ${JSON.stringify(filename)}) : ${JSON.stringify('/volview/' + filename)};
               }
-            })()`
-          };
-        }
-        return { relative: true };
+            }
+            return ${JSON.stringify('/volview/' + filename)};
+          })()`
+        };
       }
-    } : undefined,
-    base: '', // Empty base so Vite doesn't prepend absolute paths statically
-    build: isBuild
-      ? {
-        outDir: distDir,
-        lib: {
-          entry: './src/index.ts',
-          name: 'VolView',
-          formats: ['umd'],
-          fileName: (format) => `volview.${format}.js`,
-        },
-        rollupOptions: {
-          external: ['vue', 'vuetify', 'pinia'],
-          output: {
-            inlineDynamicImports: true,
-            globals: {
-              vue: 'Vue',
-              vuetify: 'Vuetify',
-              pinia: 'Pinia',
-            },
+      return { relative: true };
+    }
+  } : undefined,
+  base: isPlugin ? '' : './',
+  build: isPlugin
+    ? {
+      outDir: distDir,
+      lib: {
+        entry: './src/index.ts',
+        name: 'VolView',
+        formats: ['umd'],
+        fileName: (format) => `volview.${format}.js`,
+      },
+      rollupOptions: {
+        external: ['vue', 'vuetify', 'pinia'],
+        output: {
+          inlineDynamicImports: true,
+          globals: {
+            vue: 'Vue',
+            vuetify: 'Vuetify',
+            pinia: 'Pinia',
           },
         },
-        sourcemap: true,
-      }
-      : {
-        outDir: distDir,
-        rollupOptions: {
-          output: {
-            manualChunks(id) {
-              if (id.includes('vuetify')) {
-                return 'vuetify';
-              }
-              if (id.includes('vtk.js')) {
-                return 'vtk.js';
-              }
-              if (id.includes('node_modules')) {
-                return 'vendor';
-              }
-              return undefined;
-            },
+      },
+      sourcemap: true,
+    }
+    : {
+      outDir: distDir,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('vuetify')) {
+              return 'vuetify';
+            }
+            if (id.includes('vtk.js')) {
+              return 'vtk.js';
+            }
+            if (id.includes('node_modules')) {
+              return 'vendor';
+            }
+            return undefined;
           },
         },
-        sourcemap: true,
       },
-    define: {
-      __VERSIONS__: {
-        volview: pkgInfo.versions.volview,
-        'vtk.js': pkgInfo.versions['vtk.js'],
-        'itk-wasm': pkgInfo.versions['itk-wasm'],
-      },
+      sourcemap: true,
+    },
+  define: {
+    __VERSIONS__: {
+      volview: pkgInfo.versions.volview,
+      'vtk.js': pkgInfo.versions['vtk.js'],
+      'itk-wasm': pkgInfo.versions['itk-wasm'],
+    },
+    __IS_PLUGIN__: isPlugin,
+    ...(isPlugin ? {
       "process.env": {
         BASE_URL: "/",
         NODE_ENV: "production"
       }
-    },
-    resolve: {
-      alias: [
-        {
-          find: '@',
-          replacement: rootDir,
-        },
-        {
-          find: '@src',
-          replacement: resolvePath(rootDir, 'src'),
-        },
-      ],
-    },
-    plugins: [
+    } : {})
+  },
+  resolve: {
+    alias: [
       {
-        name: 'virtual-modules',
-        load(id) {
-          if (id.includes('@kitware/vtk.js')) {
-            if (id.includes('ColorMaps.json.js')) {
-              // We don't use the built-in colormaps
-              return 'export const v = []';
-            }
-
-            // We don't use these classes
-            if (id.includes('CubeAxesActor') || id.includes('ScalarBarActor')) {
-              return 'export default {}';
-            }
-
-            // TODO: vtk.js WebGPU isn't ready as of mid-2023
-            if (id.includes('WebGPU')) {
-              return 'export default {}';
-            }
+        find: '@',
+        replacement: rootDir,
+      },
+      {
+        find: '@src',
+        replacement: resolvePath(rootDir, 'src'),
+      },
+    ],
+  },
+  plugins: [
+    {
+      name: 'virtual-modules',
+      load(id) {
+        if (id.includes('@kitware/vtk.js')) {
+          if (id.includes('ColorMaps.json.js')) {
+            // We don't use the built-in colormaps
+            return 'export const v = []';
           }
 
-          return null;
-        },
+          // We don't use these classes
+          if (id.includes('CubeAxesActor') || id.includes('ScalarBarActor')) {
+            return 'export default {}';
+          }
+
+          // TODO: vtk.js WebGPU isn't ready as of mid-2023
+          if (id.includes('WebGPU')) {
+            return 'export default {}';
+          }
+        }
+
+        return null;
       },
-      replace({
-        preventAssignment: true,
-        // better sentry treeshaking
-        __SENTRY_DEBUG__: false,
-        __SENTRY_TRACING__: false,
-      }),
-      vue(isBuild
-        ? {}
-        : { template: { transformAssetUrls } }),
-      viteStaticCopy({
-        targets: [
-          {
-            src: resolvePath(
-              resolveNodeModulePath('itk-wasm'),
-              'dist/pipeline/web-workers/bundles/itk-wasm-pipeline.min.worker.js'
-            ),
-            dest: 'itk',
-          },
-          {
-            src: resolvePath(
-              resolveNodeModulePath('@itk-wasm/image-io'),
-              'dist/pipelines/*{.wasm,.js,.zst}'
-            ),
-            dest: 'itk/image-io',
-          },
-          {
-            src: resolvePath(
-              resolveNodeModulePath('@itk-wasm/dicom'),
-              'dist/pipelines/*{.wasm,.js,.zst}'
-            ),
-            dest: 'itk/pipelines',
-          },
-          {
-            src: resolvePath(
-              resolveNodeModulePath(
-                '@itk-wasm/morphological-contour-interpolation'
-              ),
-              'dist/pipelines/*{.wasm,.js,.zst}'
-            ),
-            dest: 'itk/pipelines',
-          },
-          {
-            src: resolvePath(
-              rootDir,
-              'src/io/itk-dicom/emscripten-build/**/dicom*'
-            ),
-            dest: 'itk/pipelines',
-          },
-          {
-            src: resolvePath(
-              rootDir,
-              'src/io/resample/emscripten-build/**/resample*'
-            ),
-            dest: 'itk/pipelines',
-          },
-        ],
-      }),
-      ...(isBuild
-        ? [
-          vueJsx(),
-          cssInjected(),
-          replaceNamedImportsFromGlobals({
-            pinia: ['defineStore', 'storeToRefs', 'createPinia', 'getActivePinia'],
-            vuetify: ['useTheme', 'useDisplay'],
-          }),
-        ]
-        : [
-          vuetify({
-            autoImport: true,
-          }),
-          createHtmlPlugin({
-            minify: true,
-            template: 'index.html',
-          }),
-        ]),
+    },
+    replace({
+      preventAssignment: true,
+      // better sentry treeshaking
+      __SENTRY_DEBUG__: false,
+      __SENTRY_TRACING__: false,
+    }),
+    vue(isPlugin ? {} : { template: { transformAssetUrls } }),
+    ...(isPlugin
+      ? [
+        vueJsx(),
+        cssInjected(),
+        replaceNamedImportsFromGlobals({
+          pinia: ['defineStore', 'storeToRefs', 'createPinia', 'getActivePinia'],
+          vuetify: ['useTheme', 'useDisplay'],
+        }),
+      ]
+      : [
+        vuetify({
+          autoImport: true,
+        }),
+        createHtmlPlugin({
+          minify: true,
+          template: 'index.html',
+        }),
+      ]
+    ),
+    ...(isPlugin ? [
       glslify({
         include: ['**/*.vs', '**/*.fs', '**/*.vert', '**/*.frag', '**/*.glsl'],
         exclude: 'node_modules/**',
         compress: true,
-      }),
-      ANALYZE_BUNDLE
-        ? visualizer({
-          template: 'treemap',
-          open: true,
-          gzipSize: true,
-          brotliSize: true,
-          filename: 'bundle-analysis.html',
-        })
-        : ({} as Plugin),
-      configureSentryPlugin(),
-    ],
+      })
+    ] : []),
+    viteStaticCopy({
+      targets: [
+        {
+          src: resolvePath(
+            resolveNodeModulePath('itk-wasm'),
+            'dist/pipeline/web-workers/bundles/itk-wasm-pipeline.min.worker.js'
+          ),
+          dest: 'itk',
+        },
+        {
+          src: resolvePath(
+            resolveNodeModulePath('@itk-wasm/image-io'),
+            'dist/pipelines/*{.wasm,.js,.zst}'
+          ),
+          dest: 'itk/image-io',
+        },
+        {
+          src: resolvePath(
+            resolveNodeModulePath('@itk-wasm/dicom'),
+            'dist/pipelines/*{.wasm,.js,.zst}'
+          ),
+          dest: 'itk/pipelines',
+        },
+        {
+          src: resolvePath(
+            resolveNodeModulePath(
+              '@itk-wasm/morphological-contour-interpolation'
+            ),
+            'dist/pipelines/*{.wasm,.js,.zst}'
+          ),
+          dest: 'itk/pipelines',
+        },
+        {
+          src: resolvePath(
+            rootDir,
+            'src/io/itk-dicom/emscripten-build/**/dicom*'
+          ),
+          dest: 'itk/pipelines',
+        },
+        {
+          src: resolvePath(
+            rootDir,
+            'src/io/resample/emscripten-build/**/resample*'
+          ),
+          dest: 'itk/pipelines',
+        },
+      ],
+    }),
+    ANALYZE_BUNDLE
+      ? visualizer({
+        template: 'treemap',
+        open: true,
+        gzipSize: true,
+        brotliSize: true,
+        filename: 'bundle-analysis.html',
+      })
+      : ({} as Plugin),
+    configureSentryPlugin(),
+  ],
+  server: {
+    // so `npm run test:e2e:dev` can access the webdriver static server temp directory
+    proxy: {
+      '/tmp': config.baseUrl!,
+    },
+  },
+  optimizeDeps: {
+    exclude: ['itk-wasm'],
+  },
+  test: {
+    environment: 'happy-dom',
+    // canvas support. See: https://github.com/vitest-dev/vitest/issues/740
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     server: {
-      // so `npm run test:e2e:dev` can access the webdriver static server temp directory
-      proxy: {
-        '/tmp': config.baseUrl!,
+      deps: {
+        inline: ['vuetify'],
       },
     },
-    optimizeDeps: isBuild
-      ? {}
-      : {
-        exclude: ['itk-wasm'],
-      },
-    test: {
-      environment: 'happy-dom',
-      // canvas support. See: https://github.com/vitest-dev/vitest/issues/740
-      poolOptions: {
-        forks: {
-          singleFork: true,
-        },
-      },
-      server: {
-        deps: {
-          inline: ['vuetify'],
-        },
-      },
-      setupFiles: ['./tests/setupVitest.ts'],
-    },
-  }
+    setupFiles: ['./tests/setupVitest.ts'],
+  },
 });
