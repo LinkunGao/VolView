@@ -85,7 +85,6 @@ export default defineConfig({
       if (hostType === 'js') {
         return {
           runtime: `(function() {
-            if (typeof __IS_PLUGIN__ !== 'undefined' && __IS_PLUGIN__) {
               try {
                 // If this import is synchronous, grab its script source directly
                 if (document.currentScript && document.currentScript.src) {
@@ -99,8 +98,6 @@ export default defineConfig({
               } catch (e) {
                 return window.__VOLVIEW_BASE_PATH__ ? (window.__VOLVIEW_BASE_PATH__ + ${JSON.stringify(filename)}) : ${JSON.stringify('/volview/' + filename)};
               }
-            }
-            return ${JSON.stringify('/volview/' + filename)};
           })()`
         };
       }
