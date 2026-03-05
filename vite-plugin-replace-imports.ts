@@ -18,10 +18,10 @@ export function replaceNamedImportsFromGlobals(options: Record<string, string[]>
         );
 
         transformed = transformed.replace(importRegex, (_, imports) => {
-          const names = imports.split(',').map((s:string) => s.trim()).filter(Boolean);
+          const names = imports.split(',').map((s: string) => s.trim()).filter(Boolean);
           const replacements = names
-            .filter((name:string) => symbols.includes(name))
-            .map((name:string) => `const ${name} = (window as any).${name};`)
+            .filter((name: string) => symbols.includes(name))
+            .map((name: string) => `const ${name} = window.${name};`)
             .join('\n');
 
           modified = true;

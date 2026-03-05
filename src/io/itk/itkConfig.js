@@ -1,12 +1,14 @@
 const fullUrl = (relative) => {
-  // ex: /itk/image-io
-  const u = new URL(document.location); // ex: http://localhost:8043/orthanc/volview/index.html
-  const origin = u.origin; // ex: http://localhost:8043
-  const pathParts = u.pathname.split('/'); // ex: ['', 'orthanc', 'volview', 'index.html']
-  pathParts.pop(); // ex: ['', 'orthanc', 'volview']
-
-  const url = origin + pathParts.join('/') + relative; // ex http://localhost:8043/orthanc/volview/itk/image-io
-  return url;
+  // Try to find the script tag that loaded VolView to determine the base URL
+  try {
+    const scriptUrl = document.currentScript.src;
+    const basePath = scriptUrl.substring(0, scriptUrl.lastIndexOf('/'));
+    return basePath + relative;
+  } catch (e) {
+    // Fallback if not determinable
+    console.warn('Could not determine VolView UMD path, falling back to /volview', e);
+    return window.location.origin + '/volview' + relative;
+  }
 };
 
 const itkConfig = {

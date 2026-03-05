@@ -1,4 +1,4 @@
-import { MaybeRef, onScopeDispose, unref, watchEffect } from 'vue';
+import { MaybeRef, onScopeDispose, unref, watchEffect, markRaw } from 'vue';
 import { vtkObject } from '@kitware/vtk.js/interfaces';
 import vtkAbstractMapper from '@kitware/vtk.js/Rendering/Core/AbstractMapper';
 import type {
@@ -57,5 +57,5 @@ export function useVtkRepresentation<
     mapper.delete();
   });
 
-  return { actor, mapper, property };
+  return markRaw({ actor, mapper, property });
 }

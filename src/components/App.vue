@@ -52,10 +52,12 @@
 
 <script lang="ts">
 import { computed, defineComponent, onMounted, ref, watch } from 'vue';
-import { storeToRefs } from 'pinia';
+import { storeToRefs, getActivePinia } from 'pinia';
 import { UrlParams } from '@vueuse/core';
 import vtkURLExtract from '@kitware/vtk.js/Common/Core/URLExtract';
 import { useDisplay } from 'vuetify';
+import { CorePiniaProviderPlugin } from '@/src/core/provider';
+import { StoreRegistry } from '@/src/plugins/storeRegistry';
 import useLoadDataStore from '@/src/store/load-data';
 import { useViewStore } from '@/src/store/views';
 import useRemoteSaveStateStore from '@/src/store/remote-save-state';
@@ -103,6 +105,13 @@ export default defineComponent({
   },
 
   setup() {
+    const pinia = getActivePinia();
+    if (pinia && !(pinia as any).__volviewPluginsInstalled) {
+      pinia.use(CorePiniaProviderPlugin({}));
+      pinia.use(StoreRegistry);
+      (pinia as any).__volviewPluginsInstalled = true;
+    }
+
     const imageStore = useImageStore();
     const dicomStore = useDICOMStore();
 
