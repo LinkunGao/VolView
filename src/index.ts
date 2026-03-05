@@ -13,6 +13,23 @@ import { registerAllReaders } from './io/readers';
 import { patchExitPointerLock } from './utils/hacks';
 import { initItkWorker } from './io/itk/worker';
 
+// Globally intercept and patch Web Worker creation to bypass MinIO/CDN Cross-Origin SecurityError
+const OriginalWorker = window.Worker;
+window.Worker = class extends OriginalWorker {
+    constructor(scriptURL: string | URL, options?: WorkerOptions) {
+        const urlStr = scriptURL.toString();
+        // If the worker URL is an external HTTP link that does not match the current host origin
+        if (urlStr.startsWith('http') && new URL(urlStr).origin !== window.location.origin) {
+            // Create a pseudo-local Blob URL that imports the cross-origin script
+            const blob = new Blob([`importScripts('${urlStr}');`], { type: 'application/javascript' });
+            const blobUrl = URL.createObjectURL(blob);
+            super(blobUrl, options);
+        } else {
+            super(scriptURL, options);
+        }
+    }
+};
+
 patchExitPointerLock();
 
 // Configure itk-wasm to use assets from our plugin folder dynamically based on where the umd bundle is hosted
