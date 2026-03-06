@@ -210,9 +210,9 @@ export default defineConfig({
         vueJsx(),
         cssInjected(),
         replaceNamedImportsFromGlobals({
-          pinia: ['defineStore', 'storeToRefs', 'createPinia', 'getActivePinia'],
-          vuetify: ['useTheme', 'useDisplay'],
-          'vue-toastification': ['useToast', 'TYPE'],
+          pinia: { globalName: 'Pinia', symbols: ['defineStore', 'storeToRefs', 'createPinia', 'getActivePinia'] },
+          vuetify: { globalName: 'Vuetify', symbols: ['useTheme', 'useDisplay'] },
+          'vue-toastification': { globalName: 'VueToastification', symbols: ['useToast', 'TYPE'] },
         }),
       ]
       : [
