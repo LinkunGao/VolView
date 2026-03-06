@@ -115,13 +115,14 @@ export default defineConfig({
         fileName: (format) => `volview.${format}.js`,
       },
       rollupOptions: {
-        external: ['vue', 'vuetify', 'pinia'],
+        external: ['vue', 'vuetify', 'pinia', 'vue-toastification'],
         output: {
           inlineDynamicImports: true,
           globals: {
             vue: 'Vue',
             vuetify: 'Vuetify',
             pinia: 'Pinia',
+            'vue-toastification': 'VueToastification',
           },
         },
       },
@@ -211,6 +212,7 @@ export default defineConfig({
         replaceNamedImportsFromGlobals({
           pinia: ['defineStore', 'storeToRefs', 'createPinia', 'getActivePinia'],
           vuetify: ['useTheme', 'useDisplay'],
+          'vue-toastification': ['useToast', 'TYPE'],
         }),
       ]
       : [
