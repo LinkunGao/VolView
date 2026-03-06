@@ -43,19 +43,19 @@ export function replaceNamedImportsFromGlobals(options: ReplaceOptions): Plugin 
                   let storeFn;
                   return new Proxy(function(){}, {
                     apply(_t2, _thisArg2, args2) {
-                      if (!storeFn) storeFn = ${globalAccess}.${name}.apply(_thisArg, args);
+                      if (!storeFn) storeFn = ${globalAccess} && ${globalAccess}.${name} ? ${globalAccess}.${name}.apply(_thisArg, args) : function(){ return {}; };
                       return storeFn.apply(_thisArg2, args2);
                     },
                     get(_t2, prop2) {
-                      if (!storeFn) storeFn = ${globalAccess}.${name}.apply(_thisArg, args);
+                      if (!storeFn) storeFn = ${globalAccess} && ${globalAccess}.${name} ? ${globalAccess}.${name}.apply(_thisArg, args) : function(){ return {}; };
                       return storeFn[prop2];
                     }
                   });
                 }
-                return ${globalAccess}.${name}.apply(_thisArg, args);
+                return ${globalAccess} && ${globalAccess}.${name} ? ${globalAccess}.${name}.apply(_thisArg, args) : undefined;
               },
               get(_t, prop) {
-                return ${globalAccess}.${name}[prop];
+                return ${globalAccess} && ${globalAccess}.${name} ? ${globalAccess}.${name}[prop] : undefined;
               }
             });`})
             .join('\n');
