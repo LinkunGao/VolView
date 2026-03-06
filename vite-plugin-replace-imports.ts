@@ -33,7 +33,11 @@ export function replaceNamedImportsFromGlobals(options: ReplaceOptions): Plugin 
           const names = imports.split(',').map((s: string) => s.trim()).filter(Boolean);
           const replacements = names
             .filter((name: string) => symbols.includes(name))
-            .map((name: string) => `const ${name} = new Proxy(function(){}, {
+            .map((name: string) => {
+              if (name === 'TYPE') {
+                return `const TYPE = { SUCCESS: "success", ERROR: "error", DEFAULT: "default", INFO: "info", WARNING: "warning" };`;
+              }
+              return `const ${name} = new Proxy(function(){}, {
               apply(_t, _thisArg, args) {
                 if ('${name}' === 'defineStore') {
                   let storeFn;
@@ -53,7 +57,7 @@ export function replaceNamedImportsFromGlobals(options: ReplaceOptions): Plugin 
               get(_t, prop) {
                 return ${globalAccess}.${name}[prop];
               }
-            });`)
+            });`})
             .join('\n');
 
           modified = true;
