@@ -33,7 +33,27 @@ export function replaceNamedImportsFromGlobals(options: ReplaceOptions): Plugin 
           const names = imports.split(',').map((s: string) => s.trim()).filter(Boolean);
           const replacements = names
             .filter((name: string) => symbols.includes(name))
-            .map((name: string) => `const ${name} = ${globalAccess}.${name};`)
+            .map((name: string) => `const ${name} = new Proxy(function(){}, {
+              apply(_t, _thisArg, args) {
+                if ('${name}' === 'defineStore') {
+                  let storeFn;
+                  return new Proxy(function(){}, {
+                    apply(_t2, _thisArg2, args2) {
+                      if (!storeFn) storeFn = ${globalAccess}.${name}.apply(_thisArg, args);
+                      return storeFn.apply(_thisArg2, args2);
+                    },
+                    get(_t2, prop2) {
+                      if (!storeFn) storeFn = ${globalAccess}.${name}.apply(_thisArg, args);
+                      return storeFn[prop2];
+                    }
+                  });
+                }
+                return ${globalAccess}.${name}.apply(_thisArg, args);
+              },
+              get(_t, prop) {
+                return ${globalAccess}.${name}[prop];
+              }
+            });`)
             .join('\n');
 
           modified = true;
