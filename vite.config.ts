@@ -126,7 +126,7 @@ export default defineConfig({
           },
         },
       },
-      sourcemap: true,
+      sourcemap: false,
     }
     : {
       outDir: distDir,
