@@ -118,5 +118,9 @@
     "*.{js,jsx,ts,tsx,vue}": [
       "eslint"
     ]
+  },
+  "volta": {
+    "node": "22.12.0",
+    "yarn": "1.22.22"
   }
 }
